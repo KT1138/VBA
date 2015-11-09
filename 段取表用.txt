@@ -1,0 +1,117 @@
+'段取表関係の定数
+Const ColumnDDay As Integer = 2   '着日
+Const ColumnDExp As Integer = 3   '配車名
+Const ColumnDDest As Integer = 4   '送り先名
+Const ColumnDNum As Integer = 5   '件数
+Const RowDFirst As Integer = 5   '最初の送り先
+Const BookDName As String = "Book1.xlsm"   '段取表が入っているブック
+Const SheetDName As String = "段取表"   '段取表が入っているシート名
+
+'確定報関係の定数
+Const ColumnKDay As Integer = 2   '着日
+Const ColumnKDest As Integer = 4   '送り先名
+Const ColumnKNum As Integer = 6   '枚数
+Const ColumnKExp As Integer = 10   '実績欄
+Const RowKFirst As Integer = 4   '最初の送り先
+Const BookKName As String = "確定報.xlsm"   '確定報が入っているブック名
+Const SheetKName As String = "確定報"   '確定報データが入っているシート名
+
+'それ以外の定数
+Const OriginalOrder As Integer = 12   '利用するユーザー設定リストの番号
+
+
+
+'注意点:
+'送り先名が少しでも違うと配車マークが付与されない
+'   → 送り先名置換マクロ実行前にこのマクロを実行すること
+'段取表が掲載されているブックと確定報が掲載されているブック
+'をともに開いた状態でこのマクロを使うこと
+Sub 配車マーク付与()
+    '段取表
+    Dim sheet_d As Worksheet
+    Set sheet_d = Workbooks(BookDName).Sheets(SheetDName)
+    Dim row_d_last As Integer: row_d_last = _
+            sheet_d.Cells(Rows.Count, ColumnDDest).End(xlUp).Row   '最後の送り先が(ry
+    
+    '確定報
+    Dim sheet_k As Worksheet
+    Set sheet_k = Workbooks(BookKName).Sheets(SheetKName)
+    Dim row_k_last As Integer: row_k_last = _
+            sheet_k.Cells(Rows.Count, ColumnKDest).End(xlUp).Row   '最後の送り先が(ry
+    
+    Dim cnt_d As Integer
+    Dim cnt_k As Integer
+    '両シートのデータを比較
+    For cnt_d = RowDFirst To row_d_last
+    
+        '送り先
+        Dim dest As String
+        If sheet_d.Cells(cnt_d, ColumnDDest) = "" Then
+            GoTo Continue
+        Else
+            dest = sheet_d.Cells(cnt_d, ColumnDDest)
+        End If
+   
+        '配車
+        Dim exp As String
+        If sheet_d.Cells(cnt_d, ColumnDExp) = "" Then
+            GoTo Continue
+        Else
+            exp = sheet_d.Cells(cnt_d, ColumnDExp)
+        End If
+    
+        For cnt_k = RowKFirst To row_k_last
+            If dest = sheet_k.Cells(cnt_k, ColumnKDest) Then
+                '配車マーク付与
+                sheet_k.Cells(cnt_k, ColumnKExp).Value = exp
+            End If
+        Next cnt_k
+    
+Continue:
+    
+    Next cnt_d
+      
+End Sub
+
+
+Sub 会社名並べ替え_段取表()
+Dim sheet_d As Worksheet
+Set sheet_d = Workbooks(BookDName).Sheets(SheetDName)
+
+Dim row_d_last As Integer: row_d_last = _
+        sheet_d.Cells(Rows.Count, ColumnDDest).End(xlUp).Row   '最後の送り先が(ry
+
+sheet_d.Range(sheet_d.Cells(RowDFirst, ColumnDDay), sheet_d.Cells(row_d_last, ColumnDNum)) _
+        .Sort Key1:=sheet_d.Cells(RowDFirst, ColumnDExp), _
+              Key2:=sheet_d.Cells(RowDFirst, ColumnDDay), order2:=xlDescending, _
+              Key3:=sheet_d.Cells(RowDFirst, ColumnDDest), _
+              OrderCustom:=OriginalOrder + 1
+
+End Sub
+
+
+Sub 会社名並べ替え_確定報()
+    Dim sheet_k As Worksheet
+    Set sheet_k = Workbooks(BookKName).Sheets(SheetKName)
+    
+    Dim row_k_last As Integer: row_k_last = _
+            sheet_k.Cells(Rows.Count, ColumnKDest).End(xlUp).Row   '最後の送り先が(ry
+        
+    sheet_k.Range(sheet_k.Cells(RowKFirst, ColumnKDay), sheet_k.Cells(row_k_last, ColumnKExp)) _
+            .Sort Key1:=sheet_k.Cells(RowKFirst, ColumnKNum)
+    
+    sheet_k.Range(sheet_k.Cells(RowKFirst, ColumnKDay), sheet_k.Cells(row_k_last, ColumnKExp)) _
+            .Sort Key1:=sheet_k.Cells(RowKFirst, ColumnKExp), _
+                  Key2:=sheet_k.Cells(RowKFirst, ColumnKDay), order2:=xlDescending, _
+                  Key3:=sheet_k.Cells(RowKFirst, ColumnKDest), _
+                  OrderCustom:=OriginalOrder + 1
+End Sub
+
+
+'会社PC移植時の注意
+'デスクトップ\テスト フォルダ内に段取表・確定報が入ったブックをそれぞれコピーし、
+'そのうちの段取表のほうのブックの標準モジュール内に↑のマクロ群を移植し、正常に動作するか確かめること
+
+'定数の値を変更すること
+
+
