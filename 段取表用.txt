@@ -10,6 +10,7 @@ Const SheetDName As String = "段取表"   '段取表が入っているシート名
 '確定報関係の定数
 Const ColumnKDay As Integer = 2   '着日
 Const ColumnKDest As Integer = 4   '送り先名
+Const ColumnKOrderNum As Integer = 5   '注番
 Const ColumnKNum As Integer = 6   '枚数
 Const ColumnKExp As Integer = 10   '実績欄
 Const RowKFirst As Integer = 4   '最初の送り先
@@ -115,3 +116,63 @@ End Sub
 '定数の値を変更すること
 
 
+'以下、確定報会社名並べ替え前後で、データ内容に狂いが生じていないか
+'チェックするための小道具。
+'バグチェッカーを実行し、セルが塗りつぶされなければOK
+
+
+'同じ注番の行がないか検索
+'一致:行番号
+'不一致:0
+Function SearchOrderNum(OrderNum, SheetName)
+Dim i As Long
+For i = RowKFirst To Sheets(SheetName) _  
+	.Cells(Rows.Count, 1) _
+.End(xlUp).row
+	If OrderNum = _
+	Sheets(SheetName).Cells(i, ColumnOrderNum).Value Then
+		SearchOrderNum = i
+		Exit Function
+	End If
+Next i
+SearchOrderNum = 0
+End Function
+
+
+'与えられた2つの行番号の行内容が一致するか比較
+'一致:何もしない
+'不一致:内容が食い違った欄を塗りつぶす
+Sub CheckOrderInfo(Target, i)
+Dim col As Long
+	For col = ColumnKDay To ColumnKExp
+		If Sheets("出荷指示書").Cells(Target, col).Value <> _
+		Sheets("出荷指示書後").Cells(i, col).Value Then
+			Sheets("出荷指示書後").Cells(i, col) _
+			.Interior.ColorIndex = 6
+		End If
+	Next col
+End Sub
+
+
+Sub バグチェッカー()
+	Dim i As Long, Target As Long
+	Sheets("出荷指示書後").Select
+	Cells.Interior.ColorIndex = xlNone
+	For i = RowKFirst To Cells(Rows.Count, 1).End(xlUp).row
+	Target = SearchOrderNum(Cells(i, ColumnKOrderNum), "出荷指示書")
+		If Target = 0 Then
+			Range(Cells(i, ColumnKDay), Cells(i, ColumnKExp)) _   
+			.Interior.ColorIndex = 3
+		Else
+			Call CheckOrderInfo(Target, i)
+		End If
+	Next i
+	Sheets("出荷指示書").Select
+	Cells.Interior.ColorIndex = xlNone
+	For i = RowKFirst To Cells(Rows.Count, 1).End(xlUp).row
+		If SearchOrderNum(Cells(i, ColumnKOrderNum), "出荷指示書後") = 0 Then
+			Range(Cells(i, ColumnKDay), Cells(i, ColumnKExp)) _
+			.Interior.ColorIndex = 3
+		End If
+	Next i
+End Sub
